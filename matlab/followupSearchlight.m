@@ -9,7 +9,7 @@
 clear;clc
 returnHere = pwd; % We'll come back here later
 % cd ..
-toolboxRoot = ['Z:/Box Sync/UCLA/Research/Music_fMRI/code']; addpath(genpath(toolboxRoot));
+toolboxRoot = ['D:/GitHub/Music-fMRI/matlab']; addpath(genpath(toolboxRoot));
 % Generate a userOptions structure
 % cd /Volumes/pudgyDrive/Music
 userOptions = defineUserOptions_music(); %edit this
@@ -45,23 +45,25 @@ DetailsFilename = [userOptions.analysisName, '_fMRISearchlight_Details.mat'];
 % warpFlags.preserve = 0;
 
 %initialize data
+% if starting from scratch, run this:
 % fullBrainVols = fMRIDataPreparation(betaCorrespondence_music2(), userOptions);
-% a=load('ImageData/SearchlightMusic_ImageData_L')
-% fullBrainVols_Lang=a.fullBrainVols;
-% clear a;
-% a=load('ImageData/SearchlightMusic_ImageData_M')
-% fullBrainVols_Mus=a.fullBrainVols;
-% clear a;
+% binaryMasks_nS = fMRIMaskPreparation(userOptions);
+
+% load previously generated files
 a=load('ImageData/SearchlightMusic_ImageData');
 fullBrainVols=a.fullBrainVols;
 clear a
 userOptions.maskNames={'grayMatter'};
-% % binaryMasks_nS = fMRIMaskPreparation(userOptions);
+% load the corresponding masks. Run the whole brain in case, but the stats
+% are only run in the correct regions (we didn't look at the remainder of
+% the brain)
+
 % load('ImageData/SearchlightMusic_Masks')
-load('ImageData/Follow_Up_Masks')
-load('ImageData/IFG_followUp_Masks.mat')
+% load('ImageData/Follow_Up_Masks')
+% load('ImageData/IFG_followUp_Masks.mat')
 load('ImageData/SearchlightMusic_Masks.mat')
 
+% configure labels or hypothesis matrices
 % models = constructModelRDMs(modelRDMs_searchlight2, userOptions);
 models(1).name='L2M';
 models(1).label=[ones(1,28) 2*ones(1,14)];
@@ -71,36 +73,31 @@ models(2).label=models(1).label;
 % models(3).label=models(1).label;
 % models(4).name='M2M';
 % models(4).label=models(1).label;
-%%compute the correlation maps per subject
-% add mask loop?
+
+% set the mask
 % maskName = userOptions.maskNames;
 % maskName='grayMatter'; % set the mask
-maskName='uniOverlap'; % set the mask
-maskName='LH_InferiorFrontalGyrus';
+% maskName='uniOverlap'; % set the mask
+% maskName='LH_InferiorFrontalGyrus';
 maskName='grayMatter';
 % parpool open
 
-for subI = 1:length(userOptions.subjectNames) % can parallelize
-% for subI = 14:Nsubjects % can parallelize
+for subI = 1:length(userOptions.subjectNames)
     subject=userOptions.subjectNames{subI};
     fprintf(['extracting fullBrain volumes for subject %d \n'],subI)
     singleSubjectVols=fullBrainVols.(subject);
-    
     userOptions.searchlightRadius = 6;
     mask = binaryMasks_nS.(subject).(maskName);
     fprintf(['computing correlation maps for subject %d \n'],subI)
-    %     [rs, ps, ns, searchlightRDMs.(subject)] = searchlightMapping_fMRI(singleSubjectVols, models, mask, userOptions, searchlightOptions);
+    % searchlight analysis
     tic
     [rs, ps, ns] = searchlight_MusicSVM(singleSubjectVols, models(1).label, mask, userOptions, searchlightOptions);
-%     [rs, ps, ns] = searchlight_MusicSVMAP(singleSubjectVols, models(1).label, mask, userOptions, searchlightOptions);
+    %     [rs, ps, ns] = searchlight_MusicSVMAP(singleSubjectVols, models(1).label, mask, userOptions, searchlightOptions);
     toc
-    % NEED TO DELETE STRUCTURALSPATH BEFORE RUNNING BECAUSE I DON'T KNOW HOW IT
-    % WORKS
-    %     [rs, ps, ns, searchlightRDMs] = fMRISearchlight_jeff(singleSubjectVols, models, mask, userOptions, searchlightOptions);
+    % write NIFTI images
     for modelI=1:length(models)
         modelName=models(modelI).name;
         gotoDir(userOptions.rootPath, 'Maps');
-        
         fName= strcat(subject,  '_', maskName, modelName, '_rMap');
         if class(fName)=='cell'
             writeOpts.name=fName{1};
@@ -109,10 +106,10 @@ for subI = 1:length(userOptions.subjectNames) % can parallelize
         end
         writeOpts.description=[subject '_R-Map'];
         writeOpts.template=[userOptions.rootPath '/template_brain.hdr'];
+        % the template brain is the example functional image for each
+        % subject
         writeMe=rs(:,:,:,modelI);
         write_brainMap(writeMe, userOptions, writeOpts);
-        
-        
         fName= strcat(subject,  '_', maskName, modelName, '_thresh');
         if class(fName)=='cell'
             writeOpts.name=fName{1};
@@ -125,12 +122,9 @@ for subI = 1:length(userOptions.subjectNames) % can parallelize
         write_brainMap(writeMe, userOptions, writeOpts);
     end
     save(['rs_',subject,'.mat'],'rs', 'ps');
-    %     save(['RDMs_', subject, '.mat'], 'searchlightRDMs', '-v7.3');
     clear rs ps
     cd(returnHere)
     
-    cd(returnHere)
-    
 end %subjectloop
-   delete(gcp)
+delete(gcp)
 

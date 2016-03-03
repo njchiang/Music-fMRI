@@ -1,4 +1,7 @@
 function [smm_rs, smm_ps, n] = searchlight_MusicSVM(fullBrainVolumes, models, mask, userOptions, localOptions)
+% this is identical to searchlight_fMRI in the rsa toolbox, except that
+% I've added parallelization and a small permutation loop.
+
 
 % ARGUMENTS
 % fullBrainVolumes	A voxel x condition x session matrix of activity
@@ -203,7 +206,7 @@ parfor cMappingVoxI=1:nVox_mappingMask_request
     nVec(cMappingVoxI)=length(cIllValidVox_YspaceINDs);
     
     if n(x,y,z) < 2, continue; end%if % This stops the function crashing if it accidentally encounters an out-of-brain floating voxel (these can occur if, for example, skull stripping fails)
-    %% analysis-Jeff
+    %% analysis-THIS PART IS DIFFERENT FROM THE RSATOOLBOX
     if localOptions.averageSessions
         t_pats=zeros(size(t_patsPerSession.s1(:,cIllValidVox_YspaceINDs)));
         for session = 1:localOptions.nSessions
@@ -229,7 +232,7 @@ parfor cMappingVoxI=1:nVox_mappingMask_request
     tmpM2LDist=zeros(nRand, 1000);
     tmpL2MDist=zeros(nRand, 1000);
     for i=1:nRand
-        balanceSet=randperm(28);
+        balanceSet=randperm(28); % randomly selecting from "hierarchical" condition
         lSet=l_pats([balanceSet(1:14) 29:42],:);
         mSet=m_pats([balanceSet(1:14) 29:42],:);
         lStruct=libsvmtrain(models([1:14 29:42])', lSet, opts);

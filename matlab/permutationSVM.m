@@ -41,8 +41,6 @@ try
     % this should give the distribution/percentile
     p95threshold=quantile(mean(accs), .95);
     classAcc=mean(accs(:,1));
-%     fprintf('THE CLASSIFICATION ACCURACY IS DUR... %d \n', classAcc)
-%     fprintf('THE .05 CUTOFF IS DUR... %d \n', p95threshold)
 catch err
     save('permutationError.mat')
     rethrow(err)
