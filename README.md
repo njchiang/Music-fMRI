@@ -14,9 +14,13 @@ Run all preprocessing in FSL and convert beta-maps to Analyze format
 fslchfiletype NIFTI_PAIR ${BETA}.nii.gz
 
 Run searchlight analysis in MATLAB
+
 1. edit defineUserOptions.m and fill out study information (subject names, paths, etc)
+
 2. edit betaCorrespondence.m (condition names, paths)
+
 3. run followUpSearchlight.m (searchlightMapping and permutationSVM are dependencies of this). I ran it a few lines at a time, rather than simply running the script. 
+
 
 References
 RSA toolbox: 
